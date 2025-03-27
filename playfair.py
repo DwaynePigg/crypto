@@ -2,7 +2,7 @@ from collections.abc import Iterable, Sequence
 from itertools import chain
 from string import ascii_uppercase
 
-from crypto import add_unique, batched, collect_to_str
+from crypto import add_unique, to_code, batched, collect_to_str
 
 Grid = Sequence[Sequence[str]]
 
@@ -12,28 +12,29 @@ def make_key(keyword: str, combine='IJ'):
 	letters = chain(keyword.upper(), ascii_uppercase)
 	seen = set()
 	while len(seen) < 25:
-		c = next(letters)
-		if c == replace:
-			c = share
-		if add_unique(seen, c):
-			yield c
+		a = next(letters)
+		if a == replace:
+			a = share
+		if add_unique(seen, a):
+			yield a
 
 
 def _create_lookup(grid: Grid, combine='IJ'):
-	lookup: dict[str, tuple[int, int]] = {}
+	lookup: list[tuple[int, int]] = [None] * 26
 	for i, row in enumerate(grid):
-		for j, c in enumerate(row):
-			lookup[c] = i, j
+		for j, a in enumerate(row):
+			lookup[to_code(a)] = i, j
 	if combine:
 		share, replace = combine
-		lookup[replace] = lookup[share]
+		lookup[to_code(replace)] = lookup[to_code(share)]
 	return lookup
 
 
 def _ensure_ciphertext(message: str):
-	for c1, c2 in batched(message, 2):
-		c1 = c1.upper()
-		c2 = c2.upper()
+	# TODO: convention a for letters, c for code
+	for a1, a2 in batched(message, 2):
+		c1 = to_code(a1)
+		c2 = to_code(a2)
 		if c1 == c2:
 			raise ValueError(f"ciphertext has double {c1}")
 		yield c1, c2
@@ -43,29 +44,40 @@ class Playfair:
 
 	def __init__(self, grid: Grid, separator='X', alt_separator='Q', combine='IJ'):
 		self.grid = grid
-		self.separator = separator
-		self.alt_separator = alt_separator
+		self.separator = to_code(separator)
+		self.alt_separator = to_code(alt_separator)
 		self.lookup = _create_lookup(grid, combine)
 
 	@classmethod
 	def from_keyword(cls, keyword, separator='X', alt_separator='Q', combine='IJ'):
 		grid = list(batched(make_key(keyword, combine), 5))
 		return cls(grid, separator, alt_separator, combine)
+	
+	def _separator_for(self, c: int):
+		return self.separator if c != self.separator else self.alt_separator
 
 	def _separate_doubles(self, message: str):
 		i = 0
-		while i < len(message):
-			c1 = message[i].upper()
-			c2 = message[i + 1].upper() if i < len(message) - 1 else self.separator
+		msg_len = len(message)
+		while True:
+			rem = msg_len - i
+			if rem == 0:
+				return
 
+			c1 = to_code(message[i])
+			if rem == 1:
+				yield c1, self._separator_for(c1)
+				return	
+
+			c2 = to_code(message[i + 1])
 			if c1 == c2:
-				c2 = self.separator if c1 != self.separator else self.alt_separator
+				c2 = self._separator_for(c1)
 				i += 1
 			else:
 				i += 2
 			yield c1, c2
 
-	def encode_pair(self, c1: str, c2: str, shift: int = 1):
+	def encode_pair(self, c1: int, c2: int, shift: int = 1):
 		row1, col1 = self.lookup[c1]
 		row2, col2 = self.lookup[c2]
 		if row1 == row2:
@@ -117,6 +129,8 @@ if __name__ == '__main__':
 	separator = separators[0]
 	if len(separators) >= 2:
 		alt_separator = separators[1]
+		if separator == alt_separator:
+			raise ValueError('Separators must be different')
 	else:
 		alt_separator = 'Q' if separator != 'Q' else 'X'
 

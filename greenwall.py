@@ -9,25 +9,25 @@ ALPHA_UPPER = ascii_uppercase + PUNCT
 ALPHA_LOWER = ascii_lowercase + PUNCT
 
 
-def _to_code(c):
-	x = ord(c)
-	if x >= OFFSET_UPPER:
-		return (x - OFFSET_UPPER) & 0x1F
+def _to_code(a):
+	c = ord(a)
+	if c >= OFFSET_UPPER:
+		return (c - OFFSET_UPPER) & 0x1F
 	# not super elegant but it's fast
-	if x == 32:  # ' '
+	if c == 32:  # ' '
 		return 26
-	if x == 44:  # ','
+	if c == 44:  # ','
 		return 27
-	if x == 46:  # '.'
+	if c == 46:  # '.'
 		return 28
-	raise ValueError(c)
+	raise ValueError(a)
 
 
-def _encrypt(x, horiz_value, vert_value, block_value):
-	return ((block_value * x + horiz_value) * vert_value) % 29
+def _encrypt(c: int, horiz_value: int, vert_value: int, block_value: int):
+	return ((block_value * c + horiz_value) * vert_value) % 29
 
-def _decrypt(x, horiz_value, vert_value, block_value):
-	return ((MULT_INV[vert_value] * x - horiz_value) * MULT_INV[block_value]) % 29
+def _decrypt(c: int, horiz_value: int, vert_value: int, block_value: int):
+	return ((MULT_INV[vert_value] * c - horiz_value) * MULT_INV[block_value]) % 29
 
 
 class Greenwall:
@@ -47,8 +47,8 @@ class Greenwall:
 	
 	@collect_to_str
 	def _cipher(self, message, mode, alphabet):
-		for c, (h, v, b) in zip(message, self._iter_values()):
-			yield alphabet[mode(_to_code(c), h, v, b)]
+		for a, (h, v, b) in zip(message, self._iter_values()):
+			yield alphabet[mode(_to_code(a), h, v, b)]
 
 
 	def encrypt(self, message):

@@ -1,12 +1,12 @@
 from itertools import cycle
 
-from crypto import OFFSET_LOWER, OFFSET_UPPER, collect_to_str, to_code
+from crypto import OFFSET_LOWER, OFFSET_UPPER, to_code, collect_to_str
 
 
 @collect_to_str
 def vigenere(message: str, key: str, sign: int, offset: int):
-	for c, k in zip(message, cycle(sign * to_code(k) for k in key)):
-		yield chr((to_code(c) + k) % 26 + offset)
+	for a, k in zip(message, cycle(sign * to_code(k) for k in key)):
+		yield chr((to_code(a) + k) % 26 + offset)
 
 
 def encrypt(message: str, key: str):
@@ -39,7 +39,7 @@ if __name__ == '__main__':
 	if args.key is not None:
 		key = args.key
 	else:
-		with open(args.pad, encoding='utf-8') as f:
+		with open(args.pad, encoding='UTF-8') as f:
 			key = f.read()
 
 	cryptoshell.run_cipher(args, 

@@ -2,7 +2,7 @@ from collections.abc import Iterable, Sequence
 from itertools import chain
 from string import ascii_uppercase
 
-from crypto import add_unique, batched_strict, collect_to_str
+from crypto import add_unique, batched, collect_to_str
 
 Grid = Sequence[Sequence[str]]
 
@@ -31,7 +31,9 @@ def _create_lookup(grid: Grid, combine='IJ'):
 
 
 def _ensure_ciphertext(message: str):
-	for c1, c2 in batched_strict(message, 2):
+	for c1, c2 in batched(message, 2):
+		c1 = c1.upper()
+		c2 = c2.upper()
 		if c1 == c2:
 			raise ValueError(f"ciphertext has double {c1}")
 		yield c1, c2
@@ -47,14 +49,14 @@ class Playfair:
 
 	@classmethod
 	def from_keyword(cls, keyword, separator='X', alt_separator='Q', combine='IJ'):
-		grid = list(batched_strict(make_key(keyword, combine), 5))
+		grid = list(batched(make_key(keyword, combine), 5))
 		return cls(grid, separator, alt_separator, combine)
 
 	def _separate_doubles(self, message: str):
 		i = 0
 		while i < len(message):
-			c1 = message[i]
-			c2 = message[i + 1] if i < len(message) - 1 else self.separator
+			c1 = message[i].upper()
+			c2 = message[i + 1].upper() if i < len(message) - 1 else self.separator
 
 			if c1 == c2:
 				c2 = self.separator if c1 != self.separator else self.alt_separator
@@ -64,8 +66,8 @@ class Playfair:
 			yield c1, c2
 
 	def encode_pair(self, c1: str, c2: str, shift: int = 1):
-		row1, col1 = self.lookup[c1.upper()]
-		row2, col2 = self.lookup[c2.upper()]
+		row1, col1 = self.lookup[c1]
+		row2, col2 = self.lookup[c2]
 		if row1 == row2:
 			return (
 				self.grid[row1][(col1 + shift) % 5], 

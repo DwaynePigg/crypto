@@ -36,7 +36,12 @@ if __name__ == '__main__':
 	cryptoshell.mode_args(parser)
 	args = parser.parse_args()
 
-	key = cryptoshell.str_or_file(args.key, args.pad)
+	if args.key is not None:
+		key = args.key
+	else:
+		with open(args.pad, encoding='utf-8') as f:
+			key = f.read()
+
 	cryptoshell.run_cipher(args, 
 		partial(encrypt, key=key),
 		partial(decrypt, key=key))

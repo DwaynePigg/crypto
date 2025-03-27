@@ -30,6 +30,8 @@ def batched_lenient(iterable: Iterable, size: int):
 
 
 class AsciiTranslationTable:
+	__slots__ = ('chars',)
+		
 	def __init__(self, chars=None):
 		self.chars = [None] * 127 if chars is None else chars
 	
@@ -85,55 +87,33 @@ def add_unique(s: set, item):
 	return old_len != len(s)
 
 
-class CharTable:
+class CodeTable:
 	__slots__ = 'table', 'offset'
 	
-	def __init__(self, min: int | str = 0, max: int | str = 0xFF):
-		if isinstance(min, str):
-			min = ord(min)
-		if isinstance(max, str):
-			max = ord(max)
-		self.table = [None] * (max - min + 1)
-		self.offset = min
-
-	@classmethod
-	def for_printable(cls):
-		return cls(0x20, 0xFF)
-
-	@classmethod
-	def for_upper(cls):
-		return cls('A', 'Z')
-
-	@classmethod
-	def for_lower(cls):
-		return cls('a', 'z')
-
-	def _get_index(self, key: str):
-		index = ord(key) - self.offset
-		if not (0 <= index < len(self.table)):
-			raise IndexError(f"'{key}' not in '{chr(self.offset)}'..'{chr(len(self) + self.offset - 1)}'")
-		return index
-
-	def __getitem__(self, key: str):
-		return self.table[self._get_index(key)]
-
-	def __setitem__(self, key: str, value):
-		self.table[self._get_index(key)] = value
-
-	def __len__(self):
-		return len(self.table)
-
-	def items(self):
-		for i, value in enumerate(self.table):
-			yield chr(i + self.offset), value
+	def __init__(self, table: list[str], offset: int):
+		self.table = table
+		self.offset = offset
 	
-	def update(self, mapping):
-		try:
-			items = mapping.items()
-		except AttributeError:
-			items = mapping
-		for key, value in items:
-			self[key] = value
+	@classmethod
+	def from_alphabet_ignore_case(cls, alphabet: str):
+		alphabet_both_cases = alphabet.lower() + alphabet.upper()
+		offset = ord(min(alphabet_both_cases))
+		table = [None] * (ord(max(alphabet_both_cases)) - offset + 1)
+		for i, a in enumerate(alphabet):
+			table[ord(a.upper()) - offset] = i
+			table[ord(a.lower()) - offset] = i
+		return cls(table, offset)
+
+	@classmethod
+	def from_alphabet(cls, alphabet: str):
+		offset = ord(min(alphabet))
+		table = [None] * (ord(max(alphabet)) - offset + 1)
+		for i, a in enumerate(alphabet):
+			table[ord(a) - offset] = i
+		return cls(table, offset)
+
+	def __getitem__(self, c: str):
+		return self.table[ord(c) - self.offset]
 
 	def __repr__(self):
-		return '; '.join(f"{key}: {value}" for key, value in self.items())
+		return f'<CodeTable with {len(self.table)} slots ({chr(self.offset)}..{chr(self.offset + len(self.table) - 1)})>'

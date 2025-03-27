@@ -1,22 +1,32 @@
 from itertools import product
 from string import ascii_lowercase, ascii_uppercase
 
-from crypto import collect_to_str, AsciiTranslationTable
+from crypto import collect_to_str, OFFSET_UPPER, AsciiTranslationTable
 
 MULT_INV = [None] + [pow(i, -1, 29) for i in range(1, 29)]
 PUNCT = ' ,.'
 ALPHA_UPPER = ascii_uppercase + PUNCT
 ALPHA_LOWER = ascii_lowercase + PUNCT
-TO_CODE = {c: i for i, c in enumerate(ALPHA_UPPER)}
 
 
 def _to_code(c):
-	return TO_CODE[c.upper()]
+	x = ord(c)
+	if x >= OFFSET_UPPER:
+		return (x - OFFSET_UPPER) & 0x1F
+	# not super elegant but it's fast
+	if x == 32:  # ' '
+		return 26
+	if x == 44:  # ','
+		return 27
+	if x == 46:  # '.'
+		return 28
+	raise ValueError(c)
 
-def _enc(x, horiz_value, vert_value, block_value):
+
+def _encrypt(x, horiz_value, vert_value, block_value):
 	return ((block_value * x + horiz_value) * vert_value) % 29
 
-def _dec(x, horiz_value, vert_value, block_value):
+def _decrypt(x, horiz_value, vert_value, block_value):
 	return ((MULT_INV[vert_value] * x - horiz_value) * MULT_INV[block_value]) % 29
 
 
@@ -42,16 +52,15 @@ class Greenwall:
 
 
 	def encrypt(self, message):
-		return self._cipher(message, _enc, ALPHA_UPPER)
+		return self._cipher(message, _encrypt, ALPHA_UPPER)
 
 	def decrypt(self, message):
-		return self._cipher(message, _dec, ALPHA_LOWER)
+		return self._cipher(message, _decrypt, ALPHA_LOWER)
 
 
 if __name__ == '__main__':
 	import argparse
 	import functools
-	from string import ascii_letters
 
 	import cryptoshell
 
@@ -67,7 +76,6 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 	
 	table = AsciiTranslationTable.with_letters(PUNCT)
-	table.replace('\n', ' ')
 
 	greenwall = Greenwall(args.horizontal, args.vertical)
 	cryptoshell.run_cipher(args, greenwall.encrypt, greenwall.decrypt, table)

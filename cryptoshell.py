@@ -19,23 +19,14 @@ def mode_args(parser: ArgumentParser):
 	mode_group.add_argument('-d', '--decrypt', action='store_true', help='decrypt mode')
 
 
-def str_or_file(s: str, file: FileType):
-	if s is not None:
-		return s
-	else:
-		with open(file) as f:
-			return f.read()
-
-
 def get_message(args: Namespace):
-	has_stdin = not sys.stdin.isatty()
-	has_arg_msg = args.message is not None
-	if has_stdin:
-		if has_arg_msg:
+	has_stdin = not sys.stdin.isatty()	
+	if args.message is not None:
+		if has_stdin:
 			raise ValueError('Messaged passed through both stdin and args.')
-		return sys.stdin.read()
-	if has_arg_msg:
 		return args.message
+	if has_stdin:
+		return sys.stdin.read()
 	raise ValueError('No message passed through stdin or args.')
 
 

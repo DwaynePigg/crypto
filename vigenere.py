@@ -24,10 +24,10 @@ if __name__ == '__main__':
 	import cryptoshell
 
 	parser = argparse.ArgumentParser(
-		prog='vigenere',
-		description=f"Applies the Vigenère Cipher to a message. {cryptoshell.MODE_HELP}")
+		description=f"Applies the Vigenère Cipher to a message. {cryptoshell.MODE_HELP}",
+		epilog='Invented by Giovan Battista Bellaso in 1553.')
+
 	cryptoshell.input_args(parser)
-	cryptoshell.output_args(parser)
 	key_group = parser.add_mutually_exclusive_group(required=True)
 	key_group.add_argument('-k', '--key', type=str, 
 		help='the cipher key')

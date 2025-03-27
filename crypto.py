@@ -2,12 +2,13 @@ import string
 from collections.abc import Callable, Iterable
 from itertools import chain, islice
 from os import PathLike
+from string import ascii_letters
+from types import SimpleNamespace
 from typing import Mapping, ParamSpec, Sequence
 
 OFFSET_UPPER = ord('A')
 OFFSET_LOWER = ord('a')
 FileType = str | bytes | PathLike
-TranslateTable = Sequence[str | int | None] | Mapping[int, str | int | None]
 PAD_STRICT = object()
 
 def batched(iterable: Iterable, size: int, pad=PAD_STRICT, drop=False):
@@ -28,14 +29,41 @@ def batched_lenient(iterable: Iterable, size: int):
 	return batched(iterable, size, iter(()))
 
 
-def make_filter(allow: str = ''):
-	chars: list[str | None] = [None] * 127
-	for c in chain(string.ascii_letters, allow):
-		chars[ord(c)] = c
-	return chars
+class AsciiTranslationTable:
+	def __init__(self, chars=None):
+		self.chars = [None] * 127 if chars is None else chars
+	
+	@classmethod
+	def with_letters(cls, extra=''):
+		table = cls()
+		table.allow(ascii_letters)
+		table.allow(extra)
+		return table
+	
+	def allow(self, letters):
+		for c in letters:
+			self.chars[ord(c)] = c
+
+	def replace(self, letters, replace):
+		for c, d in zip(letters, replace):
+			self.chars[ord(c)] = d
+	
+	def __getitem__(self, x):
+		return self.chars[x] if x < 127 else None
+		
+	def __repr__(self):
+		allow = []
+		replace = []
+		for c, d in enumerate(self.chars):
+			if d is not None:
+				if c == ord(d):
+					allow.append(d)
+				else:
+					replace.append(f"{chr(c).replace('\n', '\\n').replace('\t', '\\t')}:{d}")
+		return f'(allow="{''.join(allow)}", replace={{{','.join(replace)}}}'
 
 
-ALPHA_FILTER = make_filter()
+BASIC_TABLE = AsciiTranslationTable.with_letters()
 
 
 def to_code(c: str):

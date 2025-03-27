@@ -1,6 +1,6 @@
 from itertools import chain, cycle
 
-from crypto import add_unique, batched, collect_to_str, make_filter
+from crypto import add_unique, batched_strict, batched_drop, collect_to_str, make_filter
 
 
 class Adfgvx:
@@ -27,7 +27,7 @@ class Adfgvx:
 	def encrypt(self, message, pad_char='X'):
 		subs = chain.from_iterable(self.subs[c.lower()] for c in message)
 		pad = cycle(self.subs[pad_char.lower()])
-		rows = batched(subs, len(self.keyword), pad)
+		rows = batched_strict(subs, len(self.keyword), pad)
 		columns = zip(*rows)
 		scrambled = scramble(columns, self.keyword)
 		for column in scrambled:
@@ -36,12 +36,12 @@ class Adfgvx:
 	@collect_to_str
 	def decrypt(self, message):
 		col_len = len(message) // len(self.keyword)
-		columns = batched(message, col_len)
+		columns = batched_strict(message, col_len)
 		unscrambled = scramble(columns, self.inv_keyword)
 		rows = zip(*unscrambled)
 		subs = chain.from_iterable(rows)
 		inv_subs = self.inv_subs
-		for c1, c2 in batched(subs, 2, drop=True):
+		for c1, c2 in batched_drop(subs, 2):
 			yield inv_subs[(c1.upper(), c2.upper())].lower()
 
 
@@ -97,5 +97,5 @@ if __name__ == '__main__':
 	elif len(coord) != side_len:
 		raise ValueError(f"Coordinates have length {side_len} to match size of grid")
 
-	cipher = Adfgvx(batched(grid, side_len), args.keyword, coord)
+	cipher = Adfgvx(batched_strict(grid, side_len), args.keyword, coord)
 	cryptoshell.run_cipher(args, cipher.encrypt, cipher.decrypt, text_filter)

@@ -2,13 +2,13 @@ from collections.abc import Iterable, Sequence
 from itertools import chain
 from string import ascii_uppercase
 
-from crypto import add_unique, batched, collect_to_str
+from crypto import add_unique, batched_strict, collect_to_str
 
 Grid = Sequence[Sequence[str]]
 
 
-def make_key(keyword: str, alias='IJ'):
-	share, replace = alias
+def make_key(keyword: str, combine='IJ'):
+	share, replace = combine
 	letters = chain(keyword.upper(), ascii_uppercase)
 	seen = set()
 	while len(seen) < 25:
@@ -19,19 +19,19 @@ def make_key(keyword: str, alias='IJ'):
 			yield c
 
 
-def _create_lookup(grid: Grid, alias='IJ'):
+def _create_lookup(grid: Grid, combine='IJ'):
 	lookup: dict[str, tuple[int, int]] = {}
 	for i, row in enumerate(grid):
 		for j, c in enumerate(row):
 			lookup[c] = i, j
-	if alias:
-		share, replace = alias
+	if combine:
+		share, replace = combine
 		lookup[replace] = lookup[share]
 	return lookup
 
 
 def _ensure_ciphertext(message: str):
-	for c1, c2 in batched(message, 2):
+	for c1, c2 in batched_strict(message, 2):
 		if c1 == c2:
 			raise ValueError(f"ciphertext has double {c1}")
 		yield c1, c2
@@ -39,16 +39,16 @@ def _ensure_ciphertext(message: str):
 
 class Playfair:
 
-	def __init__(self, grid: Grid, separator='X', alt_separator='Q', alias='IJ'):
+	def __init__(self, grid: Grid, separator='X', alt_separator='Q', combine='IJ'):
 		self.grid = grid
 		self.separator = separator
 		self.alt_separator = alt_separator
-		self.lookup = _create_lookup(grid, alias)
+		self.lookup = _create_lookup(grid, combine)
 
 	@classmethod
-	def from_keyword(cls, keyword, separator='X', alt_separator='Q', alias='IJ'):
-		grid = list(batched(make_key(keyword, alias), 5))
-		return cls(grid, separator, alt_separator, alias)
+	def from_keyword(cls, keyword, separator='X', alt_separator='Q', combine='IJ'):
+		grid = list(batched_strict(make_key(keyword, combine), 5))
+		return cls(grid, separator, alt_separator, combine)
 
 	def _separate_doubles(self, message: str):
 		i = 0
@@ -98,14 +98,16 @@ if __name__ == '__main__':
 
 	import cryptoshell
 
-	parser = argparse.ArgumentParser(prog='playfair',
-		description=f"Applies the Playfair Cipher to a message. {cryptoshell.MODE_HELP}")
+	parser = argparse.ArgumentParser(
+		description=f"Applies the Playfair Cipher to a message. {cryptoshell.MODE_HELP}",
+		epilog='Invented by Sir Charles Wheatstone in 1854, popularized by Lord Playfair.')
 	cryptoshell.input_args(parser)
-	cryptoshell.output_args(parser)
 	parser.add_argument('-k', '--key', type=str, required=True,
 		help='the cipher key, which may be the full grid or a keyword')
-	parser.add_argument('-s', '--separator', type=str, required=False, default='XQ',
-		help='the letter for separating double letters and padding an odd-length message. If two letters are given, the second is used to separate doubles of the first letter if they occur. Defaults to XQ.')
+	parser.add_argument('-s', '--separator', type=str, default='XQ',
+		help='The letter for separating double letters and padding an odd-length message. If two letters are given, the second is used to separate doubles of the first letter if they occur. (default: XQ)')
+	parser.add_argument('-c', '--combine', type=str, default='IJ',
+		help='The letter pair that must be combined when using a 5x5 grid. The first letter stands in for the second. (default: IJ)')
 	cryptoshell.mode_args(parser)
 	args = parser.parse_args()
 
@@ -116,5 +118,5 @@ if __name__ == '__main__':
 	else:
 		alt_separator = 'Q' if separator != 'Q' else 'X'
 
-	cipher = Playfair.from_keyword(args.key, separator, alt_separator)
+	cipher = Playfair.from_keyword(args.key, separator, alt_separator, args.combine)
 	cryptoshell.run_cipher(args, cipher.encrypt, cipher.decrypt)

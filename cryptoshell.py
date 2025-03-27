@@ -1,28 +1,22 @@
+import sys
+
 from argparse import ArgumentParser, Namespace
 from collections.abc import Callable
 
-from crypto import ALPHA_FILTER, FileType, TranslateTable
+from crypto import BASIC_TABLE, FileType, AsciiTranslationTable
 
-MODE_HELP = "A message starting with a lower-case letter is assumed plaintext to be encrypted (with upper-case output), and the inverse is also true. Encrypt/decrypt can be forced with optional flags."
+MODE_HELP = 'A message starting with a lower-case letter is assumed plaintext to be encrypted (with upper-case output), and the inverse is also true. Encrypt/decrypt can be forced with optional flags.'
 
 
 def input_args(parser: ArgumentParser):
-	input_group = parser.add_mutually_exclusive_group(required=True)
-	input_group.add_argument('message', nargs='?', type=str, 
-		help='the text of the message')
-	input_group.add_argument('-i', '--input', metavar='FILE', dest='in_file', type=str,
-		help='a file containing the message')
+	parser.add_argument('message', nargs='?', type=str,
+		help='The text of the message. May be passed with stdin instead.')
 
 
 def mode_args(parser: ArgumentParser):
 	mode_group = parser.add_mutually_exclusive_group()
 	mode_group.add_argument('-e', '--encrypt', action='store_true', help='encrypt mode')
 	mode_group.add_argument('-d', '--decrypt', action='store_true', help='decrypt mode')
-
-
-def output_args(parser: ArgumentParser):
-	parser.add_argument('-o', '--output', metavar='FILE', dest='out_file', type=str,
-			help='destination for output; print to STDOUT by default')
 
 
 def str_or_file(s: str, file: FileType):
@@ -34,16 +28,15 @@ def str_or_file(s: str, file: FileType):
 
 
 def get_message(args: Namespace):
-	return str_or_file(args.message, args.in_file)
-
-
-def write_output(text: str, args: Namespace):
-	file = args.out_file
-	if file is not None:
-		with open(file, 'w') as f:
-			f.write(text)
-	else:
-		print(text, end='')
+	has_stdin = not sys.stdin.isatty()
+	has_arg_msg = args.message is not None
+	if has_stdin:
+		if has_arg_msg:
+			raise ValueError('Messaged passed through both stdin and args.')
+		return sys.stdin.read()
+	if has_arg_msg:
+		return args.message
+	raise ValueError('No message passed through stdin or args.')
 
 
 def probe_text(s: str):
@@ -57,7 +50,7 @@ def run_cipher(
 	args: Namespace,
 	encrypt: Callable[[str], str],
 	decrypt: Callable[[str], str],
-	text_filter: TranslateTable = ALPHA_FILTER,
+	text_filter: AsciiTranslationTable = BASIC_TABLE,
 	probe_func: Callable[[str], bool] = probe_text):
 
 	message = get_message(args).translate(text_filter)
@@ -69,4 +62,4 @@ def run_cipher(
 	else:
 		mode = encrypt if probe_func(message) else decrypt
 
-	write_output(mode(message), args)
+	print(mode(message), end='')

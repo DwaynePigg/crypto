@@ -1,6 +1,13 @@
 from itertools import chain, cycle
 
-from crypto import add_unique, batched_strict, batched_drop, collect_to_str, make_filter
+from crypto import OFFSET_LOWER, OFFSET_DIGIT, add_unique, batched, collect_to_str, AsciiTranslationTable
+
+
+def _to_code(a):
+	c = ord(a)
+	if c >= OFFSET_UPPER:
+		return (c - OFFSET_UPPER) & 0x1F
+	return c - OFFSET_DIGIT
 
 
 class Adfgvx:
@@ -27,7 +34,7 @@ class Adfgvx:
 	def encrypt(self, message, pad_char='X'):
 		subs = chain.from_iterable(self.subs[c.lower()] for c in message)
 		pad = cycle(self.subs[pad_char.lower()])
-		rows = batched_strict(subs, len(self.keyword), pad)
+		rows = batched(subs, len(self.keyword), pad)
 		columns = zip(*rows)
 		scrambled = scramble(columns, self.keyword)
 		for column in scrambled:
@@ -36,12 +43,12 @@ class Adfgvx:
 	@collect_to_str
 	def decrypt(self, message):
 		col_len = len(message) // len(self.keyword)
-		columns = batched_strict(message, col_len)
+		columns = batched(message, col_len)
 		unscrambled = scramble(columns, self.inv_keyword)
 		rows = zip(*unscrambled)
 		subs = chain.from_iterable(rows)
 		inv_subs = self.inv_subs
-		for c1, c2 in batched_drop(subs, 2):
+		for c1, c2 in batched(subs, 2, drop=True):
 			yield inv_subs[(c1.upper(), c2.upper())].lower()
 
 
@@ -55,7 +62,6 @@ def get_inv_keyword(keyword):
 	return [i for _, i in indexed]
 
 
-
 if __name__ == '__main__':
 	import argparse
 	import math
@@ -67,17 +73,16 @@ if __name__ == '__main__':
 		description=f"Applies the ADFGVX Cipher to a message. {cryptoshell.MODE_HELP}")
 	cryptoshell.input_args(parser)
 	parser.add_argument('-g', '--grid', type=str, required=True,
-		help='the full text of the substitution grid. Row separators (such as commas) may be included, as all invalid characters are ignored.')
+		help='The full text of the substitution grid. Row separators (such as commas) may be included, as all invalid characters are ignored.')
 	parser.add_argument('-k', '--keyword', type=str, required=True,
 		help='the transposition keyword')
-	parser.add_argument('-c', '--coordinates', type=str, required=False, metavar='COORD',
-		help='the letters to use for the grid coordinates. Defaults to ADFGVX for a 6x6 grid and ADFGX for 5x5.')
-	parser.add_argument('-p', '--pad', type=str, required=False,
+	parser.add_argument('-c', '--coordinates', metavar='COORD', type=str,
+		help='The letters to use for the grid coordinates. Defaults to ADFGVX for a 6x6 grid and ADFGX for 5x5.')
+	parser.add_argument('-p', '--pad', type=str,
 		help='the pad character to fill out an incomplete row. Defaults to X.')
 	cryptoshell.mode_args(parser)
-	cryptoshell.output_args(parser)
 	args = parser.parse_args()
-	text_filter = make_filter(string.digits)
+	text_filter = AsciiTranslationTable.with_letters(string.digits)
 
 	grid = args.grid.translate(text_filter)
 
@@ -92,10 +97,9 @@ if __name__ == '__main__':
 		elif side_len == 5:
 			coord = 'ADFGX'
 		else:
-			raise ValueError(
-				f"Coordinates must be specified for grid of length {side_len}x{side_len}")
+			raise ValueError(f"Coordinates must be specified for grid of length {side_len}x{side_len}")
 	elif len(coord) != side_len:
 		raise ValueError(f"Coordinates have length {side_len} to match size of grid")
 
-	cipher = Adfgvx(batched_strict(grid, side_len), args.keyword, coord)
+	cipher = Adfgvx(batched(grid, side_len), args.keyword, coord)
 	cryptoshell.run_cipher(args, cipher.encrypt, cipher.decrypt, text_filter)

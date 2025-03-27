@@ -31,7 +31,6 @@ def _create_lookup(grid: Grid, combine='IJ'):
 
 
 def _ensure_ciphertext(message: str):
-	# TODO: convention a for letters, c for code
 	for a1, a2 in batched(message, 2):
 		c1 = to_code(a1)
 		c2 = to_code(a2)
@@ -117,7 +116,7 @@ if __name__ == '__main__':
 		epilog='Invented by Sir Charles Wheatstone in 1854, popularized by Lord Playfair.')
 	cryptoshell.input_args(parser)
 	parser.add_argument('-k', '--key', type=str, required=True,
-		help='the cipher key, which may be the full grid or a keyword')
+		help='The cipher key, which may be the full grid or a keyword. Row separators (such as commas) may be included, as all invalid characters are ignored.')
 	parser.add_argument('-s', '--separator', type=str, default='XQ',
 		help='The letter for separating double letters and padding an odd-length message. If two letters are given, the second is used to separate doubles of the first letter if they occur. (default: XQ)')
 	parser.add_argument('-c', '--combine', type=str, default='IJ',

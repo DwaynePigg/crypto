@@ -24,16 +24,14 @@ if __name__ == '__main__':
 	import cryptoshell
 
 	parser = argparse.ArgumentParser(
-			prog='caesar',
-			description="Tests all possible Caesar shifts of an encrypted message.")
+		description="Tests all possible Caesar shifts of an encrypted message. Looking to actually *use* the Caesar cipher? Just run vigenere with a one-letter key.")
 	cryptoshell.input_args(parser)
-	cryptoshell.output_args(parser)
 	cryptoshell.mode_args(parser)
 	parser.add_argument('-a', '--analyze', type=int, default=75, help='The maximum length of each shift. Defaults to 75. Use 0 for no limit.')
 	args = parser.parse_args()
 	message = cryptoshell.get_message(args)
 	sign, offset = (1, OFFSET_UPPER) if args.encrypt else (-1, OFFSET_LOWER)
-	max_len = args.length or None
+	max_len = args.analyze or None
 	cryptoshell.write_output('\n'.join(
 		f"{chr(i + OFFSET_UPPER)}:{shift}" for i, shift in 
 		enumerate(analyze(message, max_len, sign, offset), start=1)), args)

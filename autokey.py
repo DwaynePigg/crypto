@@ -6,7 +6,7 @@ from crypto import OFFSET_LOWER, OFFSET_UPPER, collect_to_str, to_code
 
 @collect_to_str
 def encrypt(message: str, key: str):
-	message_code = [to_code(c) for c in message]
+	message_code = [to_code(a) for a in message]
 	key_code = (to_code(k) for k in key)
 	for c, k in zip(message_code, chain(key_code, message_code)):
 		yield chr(((c + k) % 26) + OFFSET_UPPER)
@@ -15,9 +15,9 @@ def encrypt(message: str, key: str):
 @collect_to_str
 def decrypt(message: str, key: str):
 	queue = deque(to_code(k) for k in key)
-	for c in message:
-		x = (to_code(c) - queue.popleft()) % 26
-		queue.append(x)
+	for a in message:
+		c = (to_code(a) - queue.popleft()) % 26
+		queue.append(c)
 		yield chr(x + OFFSET_LOWER)
 
 
@@ -30,9 +30,8 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(prog='autokey',
 		description=f"Applies the Autokey Cipher to a message. {cryptoshell.MODE_HELP}")
 	cryptoshell.input_args(parser)
-	cryptoshell.output_args(parser)
 	parser.add_argument('-k', '--key', type=str, help='the cipher key')
-	cryptoshell.mode_args(parser)	
+	cryptoshell.mode_args(parser)
 	args = parser.parse_args()
 
 	cryptoshell.run_cipher(args,

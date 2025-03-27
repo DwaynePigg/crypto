@@ -3,7 +3,7 @@ import sys
 from argparse import ArgumentParser, Namespace
 from collections.abc import Callable
 
-from crypto import BASIC_TABLE, FileType, AsciiTranslationTable
+from crypto import BASIC_TABLE, AsciiTranslationTable
 
 MODE_HELP = 'A message starting with a lower-case letter is assumed plaintext to be encrypted (with upper-case output), and the inverse is also true. Encrypt/decrypt can be forced with optional flags.'
 

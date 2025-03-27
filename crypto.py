@@ -6,12 +6,13 @@ from string import ascii_letters
 from types import SimpleNamespace
 from typing import Mapping, ParamSpec, Sequence
 
+OFFSET_DIGIT = ord('0')
 OFFSET_UPPER = ord('A')
 OFFSET_LOWER = ord('a')
 FileType = str | bytes | PathLike
-PAD_STRICT = object()
 
-def batched(iterable: Iterable, size: int, pad=PAD_STRICT, drop=False):
+
+def batched(iterable: Iterable, size: int, pad=None, drop=False):
 	if size < 1:
 		raise ValueError(f"{size=}")
 	it = iter(iterable)
@@ -19,14 +20,10 @@ def batched(iterable: Iterable, size: int, pad=PAD_STRICT, drop=False):
 		if len(batch) < size:
 			if drop:
 				return
-			if pad is PAD_STRICT:
+			if pad is None:
 				raise ValueError(f"iterable had {len(batch)} items left over")
 			batch += tuple(islice(pad, size - len(batch)))
 		yield batch
-
-
-def batched_lenient(iterable: Iterable, size: int):
-	return batched(iterable, size, iter(()))
 
 
 class AsciiTranslationTable:
